@@ -1,0 +1,27 @@
+{
+  "name": "production_grade-order_processing-and-notification_system",
+  "version": "1.0.0",
+  "description": "A highly resilient, scalable Node.js backend built with **Express, Redis, MongoDB, and BullMQ**. This project focuses on solving critical distributed system challenges, including **race conditions, transactional consistency, distributed locking, background worker processing, graceful degradation, and system resilience under failure**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kunwar-Abhishek-Singh/Production_grade-Order_processing-and-Notification_system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Kunwar-Abhishek-Singh/Production_grade-Order_processing-and-Notification_system/issues"
+  },
+  "homepage": "https://github.com/Kunwar-Abhishek-Singh/Production_grade-Order_processing-and-Notification_system#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
