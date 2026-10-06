@@ -1,10 +1,10 @@
 const express = require('express');
 
-const app = express();
+const app = express(); //for handling middlewares and routes and error handlers
 
-app.use(express.json());
+app.use(express.json()); // when a request contains JSON data, this parse it and make it available through req.body
 
-app.get("/health", (req, res) => {
+app.get("/health", (req, res) => { // our health check endpoint, to check if the server is Healthy or not
     res.status(200).json({
         status:"OK",
         message:"Server is Healthy"
