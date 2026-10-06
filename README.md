@@ -1,7 +1,3 @@
-Here is a comprehensive, production-grade `README.md` designed specifically to showcase the engineering rigor and architecture of your project.
-
----
-
 # 🚀 Production-Ready Distributed E-Commerce Backend
 
 A highly resilient, scalable Node.js backend built with **Express, Redis, MongoDB, and BullMQ**. This project focuses on solving critical distributed system challenges, including **race conditions, transactional consistency, distributed locking, background worker processing, graceful degradation, and system resilience under failure**.
