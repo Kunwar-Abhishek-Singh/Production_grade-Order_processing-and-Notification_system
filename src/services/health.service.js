@@ -1,3 +1,5 @@
+const AppError = require("../utils/AppError");
+
 const getHealthStatus = () =>{
     return {
         status: "OK",
