@@ -8,15 +8,26 @@ const validate = (schema) => {
             query: req.query
         }); // Validate the request body against the provided schema using Zod's safeParse method
 
-        if (!result.success){
-            const message = result.error.issues
-                .map((issue) => {
-                    const field = issue.path.join('.'); // Join the path array to get the field name
-                    return `${field}: ${issue.message}`; // Create a message for each validation issue
-                })
-                .join(', '); // Join all messages with a comma and space
+        // if (!result.success){
+        //     const message = result.error.issues
+        //         .map((issue) => {
+        //             const field = issue.path.join('.'); // Join the path array to get the field name
+        //             return `${field}: ${issue.message}`; // Create a message for each validation issue
+        //         })
+        //         .join(', '); // Join all messages with a comma and space
 
-               return next(new AppError(message, 400)); // If validation fails, create a new AppError with the message and status code 400 (Bad Request) and pass it to the next middleware 
+        //        return next(new AppError(message, 400)); // If validation fails, create a new AppError with the message and status code 400 (Bad Request) and pass it to the next middleware 
+        // }
+
+        if (!result.success) {
+            const errors = result.error.issues.map((issue) => ({
+                field: issue.path.join("."),
+                message: issue.message
+            }));
+
+            return next(
+                new AppError("Validation failed", 400, errors)
+            );
         }
 
         req.validated = result.data; // If validation succeeds, attach the validated data to req.validated for use in the next middleware or route handler
