@@ -1,5 +1,5 @@
 const createOrder = (req, res) => {
-    const orderData = req.validated.body();
+    const orderData = req.validated.body;
     res.status(201).json({
         status: "Success",
         message: "Request validation passed",

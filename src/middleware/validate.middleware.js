@@ -23,3 +23,5 @@ const validate = (schema) => {
         next(); // Call the next middleware or route handler
     }
 }
+
+module.exports = validate; // Export the validate middleware function to be used in other files

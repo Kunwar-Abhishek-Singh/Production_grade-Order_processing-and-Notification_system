@@ -5,7 +5,7 @@ const createOrderSchema = z.object({
         productId: z.string().trim().min(1, {message: "Product ID is required"}), //validating that productId is a non-empty string
         quantity: z.number().int("Quantity must be an Integer").positive("Quantity must be greater than Zero"),
         email: z.string().trim().email("Invalid email address")
-    })
+    }).strict()
 });
 
 module.exports = {
