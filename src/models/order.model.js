@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: [true, "Email is required"],
         trim: true,
-        lowercase: tru
+        lowercase: true
     },
 
     status:{
