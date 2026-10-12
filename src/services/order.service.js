@@ -5,6 +5,12 @@ const createOrder = async (orderData) => {
     return order; //returning the created order
 };
 
+const getOrderById = async (orderId) => {
+    const order = await Order.findById(orderId); //finding an order in the database by its ID using the Order model
+    return order; //returning the found order
+};
+
 module.exports = {
-    createOrder //exporting the createOrder function to be used in other files
+    createOrder,
+    getOrderById //exporting both functions to be used in other files
 };
