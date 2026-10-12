@@ -164,3 +164,36 @@ test("POST /orders rejects unknown fields", async () => {
   assert.equal(response.status, 400);
   assert.equal(response.body.status, "error");
 });
+
+
+
+test("GET /orders/:id retrieves an existing order", async () => {
+  const createdOrder = await mongoose.connection
+    .collection("orders")
+    .insertOne({
+      productId: "product_get_test",
+      quantity: 3,
+      email: "gettest@example.com",
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+  const response = await request(app)
+    .get(`/orders/${createdOrder.insertedId.toString()}`);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, "Success");
+  assert.equal(response.body.data.productId, "product_get_test");
+  assert.equal(response.body.data.quantity, 3);
+});
+
+test("GET /orders/:id returns 404 when the order does not exist", async () => {
+  const response = await request(app)
+    .get("/orders/507f1f77bcf86cd799439011");
+
+  assert.equal(response.status, 404);
+  assert.equal(response.body.status, "error");
+  assert.equal(response.body.message, "Order not found");
+});
+
