@@ -22,6 +22,7 @@
   "homepage": "https://github.com/Kunwar-Abhishek-Singh/Production_grade-Order_processing-and-Notification_system#readme",
   "dependencies": {
     "dotenv": "^18.0.6",
+    "ejs": "^7.0.1",
     "express": "^5.2.1",
     "mongoose": "^9.11.1",
     "zod": "^4.6.5"

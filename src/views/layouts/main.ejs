@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || "OrderFlow Admin" %></title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/admin/orders">OrderFlow</a>
+
+      <p class="sidebar-label">WORKSPACE</p>
+
+      <a class="nav-link active" href="/admin/orders">
+        <span>▦</span> Orders
+      </a>
+
+      <div class="sidebar-footer">
+        <span class="status-dot"></span>
+        Local development
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ORDER MANAGEMENT</p>
+          <h1><%= title || "Dashboard" %></h1>
+        </div>
+
+        <span class="admin-label">Admin</span>
+      </header>
+
+      <section class="page-content">
+        <%- body %>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
