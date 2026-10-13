@@ -1,0 +1,56 @@
+
+<div class="page-intro">
+  <div>
+    <h1>Order Details</h1>
+    <p>Review order information and current status.</p>
+  </div>
+
+  <a class="btn btn-secondary" href="/admin/orders">
+    Back to Orders
+  </a>
+</div>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Order ID</span>
+    <strong class="order-id"><%= order._id %></strong>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Status</span>
+    <strong>
+      <span class="status-badge status-<%= order.status %>">
+        <%= order.status %>
+      </span>
+    </strong>
+  </div>
+</section>
+
+<section class="table-card order-details-card">
+  <h2>Order Information</h2>
+
+  <div class="detail-row">
+    <span>Product ID</span>
+    <strong><%= order.productId %></strong>
+  </div>
+
+  <div class="detail-row">
+    <span>Quantity</span>
+    <strong><%= order.quantity %></strong>
+  </div>
+
+  <div class="detail-row">
+    <span>Customer Email</span>
+    <strong><%= order.email %></strong>
+  </div>
+
+  <div class="detail-row">
+    <span>Created At</span>
+    <strong><%= new Date(order.createdAt).toLocaleString() %></strong>
+  </div>
+
+  <div class="detail-row">
+    <span>Last Updated</span>
+    <strong><%= new Date(order.updatedAt).toLocaleString() %></strong>
+  </div>
+</section>
