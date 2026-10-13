@@ -10,6 +10,7 @@ const getOrderById = async (orderId) => {
     return order; //returning the found order
 };
 
+
 module.exports = {
     createOrder,
     getOrderById //exporting both functions to be used in other files

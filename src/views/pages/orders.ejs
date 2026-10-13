@@ -1,5 +1,35 @@
 
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Total Orders</span>
+    <strong class="stat-value"><%= stats.totalOrders %></strong>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Pending</span>
+    <strong class="stat-value"><%= stats.pending %></strong>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Processing</span>
+    <strong class="stat-value"><%= stats.processing %></strong>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Completed</span>
+    <strong class="stat-value"><%= stats.completed %></strong>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Failed</span>
+    <strong class="stat-value"><%= stats.failed %></strong>
+  </div>
+</section>
+
+
 <div class="page-intro">
+    
   <div>
     <h2>All orders</h2>
     <p>Monitor and inspect orders stored in MongoDB.</p>

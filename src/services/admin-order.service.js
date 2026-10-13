@@ -45,4 +45,60 @@ const getOrders = async ({page, limit, status, search}) => {
     };
 };
 
-module.exports = {getOrders};
+
+const getOrderStats = async () => {
+  const results = await Order.aggregate([
+    {
+      $group: {
+        _id: null,
+
+        totalOrders: { $sum: 1 },
+
+        pending: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "pending"] }, 1, 0]
+          }
+        },
+
+        processing: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "processing"] }, 1, 0]
+          }
+        },
+
+        completed: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "completed"] }, 1, 0]
+          }
+        },
+
+        failed: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "failed"] }, 1, 0]
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        totalOrders: 1,
+        pending: 1,
+        processing: 1,
+        completed: 1,
+        failed: 1
+      }
+    }
+  ]);
+
+  return results[0] || {
+    totalOrders: 0,
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    failed: 0
+  };
+};
+
+
+module.exports = {getOrders, getOrderStats};

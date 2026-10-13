@@ -2,13 +2,18 @@
 const adminOrderService = require("../services/admin-order.service");
 
 const getOrdersPage = async (req, res, next) => {
-  const result = await adminOrderService.getOrders(req.validated.query);
-
+  const [result, stats] = await Promise.all([
+    adminOrderService.getOrders(req.validated.query),
+    adminOrderService.getOrderStats()
+  ]);
   const viewData = {
     title: "Orders",
-    ...result
+    ...result,
+    stats
   };
 
+
+//   console.log("viewdata is: ", viewData)
   res.render("pages/orders", viewData, (err, pageHtml) => {
     if (err) return next(err);
 

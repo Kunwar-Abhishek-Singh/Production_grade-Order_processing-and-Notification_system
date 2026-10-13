@@ -111,8 +111,6 @@ test("POST /orders creates an order with valid data", async () => {
       email: "customer@example.com"
     });
 
-    console.log("Response status:", response.status);
-console.log("Response body:", JSON.stringify(response.body, null, 2));
 
   assert.equal(response.status, 201);
   assert.equal(response.body.status, "Success");
