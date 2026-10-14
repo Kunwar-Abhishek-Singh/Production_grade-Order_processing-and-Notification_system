@@ -34,7 +34,8 @@ const config = {
     },
 
     auth:{
-        jwtSecret: process.env.JWT_SECRET // Set the JWT secret from environment variable
+        jwtSecret: process.env.JWT_SECRET, // Set the JWT secret from environment variable
+        sessionSecret: process.env.SESSION_SECRET
     }
 }
 
