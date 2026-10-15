@@ -194,3 +194,17 @@ test("Dashboard shows zero statistics when there are no orders", async () => {
   // The page should not crash when the aggregation returns no groups.
   assert.doesNotMatch(response.text, /Internal Server Error/);
 });
+
+
+test("Logout destroys the session and blocks dashboard access", async () => {
+  const logoutResponse = await adminAgent.post("/admin/logout");
+
+  assert.equal(logoutResponse.status, 302);
+  assert.equal(logoutResponse.headers.location, "/admin/login");
+
+  const dashboardResponse = await adminAgent.get("/admin/orders");
+
+  assert.equal(dashboardResponse.status, 302);
+  assert.equal(dashboardResponse.headers.location, "/admin/login");
+});
+

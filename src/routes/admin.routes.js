@@ -38,6 +38,8 @@ router.post(
   asyncHandler(login)
 );
 
+router.post("/logout", requireAdmin, logout);
+
 // Protect order dashboard and all nested order routes.
 router.use("/orders", requireAdmin);
 
