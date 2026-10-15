@@ -4,7 +4,7 @@ const express = require("express");
 const validate = require("../middleware/validate.middleware");
 const asyncHandler = require("../utils/asyncHandler");
 
-
+const requireAdmin = require("../middleware/require-admin.middleware");
 
 const { adminLoginSchema } = require("../validators/admin-login.validator");
 
@@ -22,10 +22,24 @@ const {
 
 const {
   getLoginPage,
-  login
+  login,
+  logout
 } = require("../controllers/admin-auth.controller");
 
 const router = express.Router();
+
+
+
+router.get("/login", getLoginPage);
+
+router.post(
+  "/login",
+  validate(adminLoginSchema),
+  asyncHandler(login)
+);
+
+// Protect order dashboard and all nested order routes.
+router.use("/orders", requireAdmin);
 
 router.get(
   "/orders",
@@ -37,14 +51,6 @@ router.get(
   "/orders/:id",
   validate(adminOrdersSchema),
   asyncHandler(getOrderDetailsPage)
-);
-
-router.get("/login", getLoginPage);
-
-router.post(
-  "/login",
-  validate(adminLoginSchema),
-  asyncHandler(login)
 );
 
 

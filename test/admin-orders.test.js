@@ -5,7 +5,13 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 const request = require("supertest");
+
 const app = require("../src/app");
+const Admin = require("../src/models/admin.model");
+const {
+  connectRedis,
+  disconnectRedis
+} = require("../src/config/redis");
 
 const statuses = [
   "pending",
@@ -13,6 +19,13 @@ const statuses = [
   "completed",
   "failed"
 ];
+
+const adminAgent = request.agent(app);
+
+const testAdmin = {
+  email: "admin-test@example.com",
+  password: "TestAdminPassword123!"
+};
 
 before(async () => {
   const testUri = process.env.MONGODB_TEST_URI;
@@ -23,10 +36,19 @@ before(async () => {
     );
   }
 
+  await connectRedis();
   await mongoose.connect(testUri);
 
   // This suite uses only the dedicated test database.
   await mongoose.connection.dropDatabase();
+
+  // Create a test-only admin account.
+  // The Admin model hashes the password before saving.
+  await Admin.create({
+    email: testAdmin.email,
+    passwordHash: testAdmin.password,
+    role: "superadmin"
+  });
 
   const orders = Array.from({ length: 12 }, (_, index) => ({
     productId: `product_${String(index + 1).padStart(2, "0")}`,
@@ -41,14 +63,44 @@ before(async () => {
 });
 
 after(async () => {
-  if (mongoose.connection.readyState === 1) {
-    await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.dropDatabase();
+      await mongoose.disconnect();
+    }
+  } finally {
+    await disconnectRedis();
   }
 });
 
-test("GET /admin/orders renders the dashboard", async () => {
+test("Unauthenticated users cannot access the dashboard", async () => {
   const response = await request(app).get("/admin/orders");
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/admin/login");
+});
+
+test("Admin can log in and retain the session", async () => {
+  const loginResponse = await adminAgent
+    .post("/admin/login")
+    .type("form")
+    .send({
+      email: testAdmin.email,
+      password: testAdmin.password
+    });
+
+  assert.equal(loginResponse.status, 302);
+  assert.equal(loginResponse.headers.location, "/admin/orders");
+
+  // The agent retains the session cookie from login.
+  const dashboardResponse = await adminAgent.get("/admin/orders");
+
+  assert.equal(dashboardResponse.status, 200);
+  assert.match(dashboardResponse.text, /Total Orders/);
+});
+
+test("GET /admin/orders renders the dashboard", async () => {
+  const response = await adminAgent.get("/admin/orders");
 
   assert.equal(response.status, 200);
   assert.match(response.headers["content-type"], /text\/html/);
@@ -56,7 +108,7 @@ test("GET /admin/orders renders the dashboard", async () => {
 });
 
 test("Dashboard search returns matching orders", async () => {
-  const response = await request(app)
+  const response = await adminAgent
     .get("/admin/orders?search=product_05");
 
   assert.equal(response.status, 200);
@@ -65,7 +117,7 @@ test("Dashboard search returns matching orders", async () => {
 });
 
 test("Dashboard filters orders by status", async () => {
-  const response = await request(app)
+  const response = await adminAgent
     .get("/admin/orders?status=completed");
 
   assert.equal(response.status, 200);
@@ -74,10 +126,10 @@ test("Dashboard filters orders by status", async () => {
 });
 
 test("Dashboard pagination displays the correct page", async () => {
-  const pageOne = await request(app)
+  const pageOne = await adminAgent
     .get("/admin/orders?page=1&limit=10");
 
-  const pageTwo = await request(app)
+  const pageTwo = await adminAgent
     .get("/admin/orders?page=2&limit=10");
 
   assert.equal(pageOne.status, 200);
@@ -94,7 +146,7 @@ test("Dashboard pagination displays the correct page", async () => {
 });
 
 test("Dashboard summary statistics match the database", async () => {
-  const response = await request(app).get("/admin/orders");
+  const response = await adminAgent.get("/admin/orders");
 
   assert.equal(response.status, 200);
 
@@ -134,7 +186,7 @@ test("Dashboard summary statistics match the database", async () => {
 test("Dashboard shows zero statistics when there are no orders", async () => {
   await mongoose.connection.collection("orders").deleteMany({});
 
-  const response = await request(app).get("/admin/orders");
+  const response = await adminAgent.get("/admin/orders");
 
   assert.equal(response.status, 200);
   assert.match(response.text, /Total Orders/);

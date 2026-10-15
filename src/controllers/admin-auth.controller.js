@@ -1,6 +1,7 @@
 
 const Admin = require("../models/admin.model");
 const AppError = require("../utils/AppError");
+const config = require("../config/env");
 
 const getLoginPage = (req, res) => {
   res.render("pages/login", {
@@ -51,7 +52,26 @@ const login = async (req, res) => {
   return res.redirect("/admin/orders");
 };
 
+
+const logout = (req, res, next) => {
+  req.session.destroy((error) => {
+    if (error) {
+      return next(error);
+    }
+
+    res.clearCookie("order.sid", {
+      httpOnly: true,
+      secure: config.server.nodeEnv === "production",
+      sameSite: "lax"
+    });
+
+    return res.redirect("/admin/login");
+  });
+};
+
+
 module.exports = {
   getLoginPage,
-  login
+  login,
+  logout
 };
