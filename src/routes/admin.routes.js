@@ -6,6 +6,10 @@ const asyncHandler = require("../utils/asyncHandler");
 
 const requireAdmin = require("../middleware/require-admin.middleware");
 
+const redirectIfAuthenticated = require(
+  "../middleware/redirect-if-authenticated.middleware"
+);
+
 const { adminLoginSchema } = require("../validators/admin-login.validator");
 
 const {
@@ -26,11 +30,17 @@ const {
   logout
 } = require("../controllers/admin-auth.controller");
 
+
+
 const router = express.Router();
 
 
 
-router.get("/login", getLoginPage);
+router.get(
+  "/login",
+  redirectIfAuthenticated,
+  getLoginPage
+);
 
 router.post(
   "/login",
