@@ -2,7 +2,7 @@ const { createClient } = require("redis");
 const config = require("./env");
 
 const redisClient = createClient({
-  url: config.redis.url
+  url: config.config.redis.redisUrl
 });
 
 redisClient.on("error", (error) => {
@@ -10,7 +10,7 @@ redisClient.on("error", (error) => {
 });
 
 const connectRedis = async () => {
-  if (!config.redis.url) {
+  if (!config.config.redis.redisUrl) {
     throw new Error("REDIS_URL is not configured");
   }
 

@@ -1,6 +1,7 @@
 const app = require('./app'); //importing the app.js file which contains the express app
 const {config} = require('./config/env'); //importing the env.js file which contains the environment variables
 const connectDB = require('./config/database'); //importing the database.js file which contains the database connection logic
+const { connectRedis } = require('./config/redis');
 
 
 const PORT = config.server.port || 3000; //setting the port to listen on, either from environment variable or default to 3000
@@ -11,6 +12,7 @@ const PORT = config.server.port || 3000; //setting the port to listen on, either
 
 const startServer = async () => {
     try {
+        await connectRedis();
         await connectDB(); //connect to the database
 
         const server = app.listen(config.server.port,() => {

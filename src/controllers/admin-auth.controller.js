@@ -1,3 +1,4 @@
+
 const Admin = require("../models/admin.model");
 const AppError = require("../utils/AppError");
 
@@ -8,6 +9,22 @@ const getLoginPage = (req, res) => {
   });
 };
 
+const regenerateSession = (req) =>
+  new Promise((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
+const saveSession = (req) =>
+  new Promise((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
 const login = async (req, res) => {
   const { email, password } = req.validated.body;
 
@@ -15,16 +32,23 @@ const login = async (req, res) => {
     email: email.toLowerCase()
   }).select("+passwordHash");
 
-  // Use the same response for an unknown email and a wrong password.
   if (!admin || !(await admin.comparePassword(password))) {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Session creation will be added in the next step.
-  return res.status(200).json({
-    status: "success",
-    message: "Credentials verified successfully"
-  });
+  // Prevent session fixation.
+  await regenerateSession(req);
+
+  // Store only the data required by the application.
+  req.session.admin = {
+    id: admin._id.toString(),
+    role: admin.role
+  };
+
+  // Persist the session to Redis before redirecting.
+  await saveSession(req);
+
+  return res.redirect("/admin/orders");
 };
 
 module.exports = {
