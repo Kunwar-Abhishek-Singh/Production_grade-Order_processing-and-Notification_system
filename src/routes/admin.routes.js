@@ -10,6 +10,10 @@ const redirectIfAuthenticated = require(
   "../middleware/redirect-if-authenticated.middleware"
 );
 
+const authorizeRoles = require(
+  "../middleware/authorize-roles.middleware"
+);
+
 const { adminLoginSchema } = require("../validators/admin-login.validator");
 
 const {
