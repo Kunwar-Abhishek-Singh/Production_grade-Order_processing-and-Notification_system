@@ -65,4 +65,29 @@ const getAdmins = async (req, res) => {
   });
 };
 
-module.exports = { createAdmin, getAdmins };
+
+const getAdminById = async (req, res) => {
+  const { id } = req.validated.params;
+
+  const admin = await Admin.findById(id)
+    .select("_id email role createdAt updatedAt")
+    .lean();
+
+  if (!admin) {
+    throw new AppError("Admin account not found", 404);
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      id: admin._id,
+      email: admin.email,
+      role: admin.role,
+      createdAt: admin.createdAt,
+      updatedAt: admin.updatedAt
+    }
+  });
+};
+
+
+module.exports = { createAdmin, getAdmins, getAdminById };
