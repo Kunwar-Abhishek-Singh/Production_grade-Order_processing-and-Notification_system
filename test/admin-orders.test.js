@@ -348,6 +348,69 @@ test("Admin listing rejects invalid pagination parameters", async () => {
 
 
 
+test("Superadmins can retrieve an admin by ID", async () => {
+  const createdAdmin = await Admin.findOne({
+    email: "created-admin@example.com"
+  });
+
+  assert.ok(createdAdmin, "Test admin should exist");
+
+  const response = await adminAgent
+    .get(`/admin/admins/${createdAdmin._id}`);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.email, createdAdmin.email);
+  assert.equal(response.body.data.role, createdAdmin.role);
+
+  assert.equal("passwordHash" in response.body.data, false);
+  assert.equal("password" in response.body.data, false);
+});
+
+
+
+test("Retrieving a nonexistent admin returns 404", async () => {
+  const nonexistentId = new mongoose.Types.ObjectId();
+
+  const response = await adminAgent
+    .get(`/admin/admins/${nonexistentId}`);
+
+  assert.equal(response.status, 404);
+  assert.equal(response.body.message, "Admin account not found");
+});
+
+
+
+test("Retrieving an admin with a malformed ID returns 400", async () => {
+  const response = await adminAgent
+    .get("/admin/admins/not-a-valid-id");
+
+  assert.equal(response.status, 400);
+});
+
+
+test("Unauthenticated users cannot retrieve an admin", async () => {
+  const response = await request(app)
+    .get("/admin/admins/671a4e2c9b8f123456789abc");
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/admin/login");
+});
+
+
+
+test("Regular admins cannot retrieve admin details", async () => {
+  const response = await regularAdminAgent
+    .get("/admin/admins/671a4e2c9b8f123456789abc");
+
+  assert.equal(response.status, 403);
+  assert.equal(
+    response.body.message,
+    "You do not have permission to perform this action"
+  );
+});
+
+
 
 test("Logout destroys the session and blocks dashboard access", async () => {
   const logoutResponse = await adminAgent.post("/admin/logout");
