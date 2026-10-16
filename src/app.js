@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require("path");
 const sessionMiddleware = require("./middleware/session.middleware");
+const noCache = require("./middleware/no-cache.middleware");
 const routes = require('./routes'); //importing the routes which contains all the endpoints of the application
 const errorHandler = require('./middleware/error.middleware'); //importing the error handler middleware which handles all the errors in the application
 const app = express(); //for handling middlewares and routes and error handlers
@@ -15,6 +16,8 @@ app.use(express.urlencoded({extended: true})); // when a request contains URL en
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.use(sessionMiddleware);
+
+app.use(noCache);
 
 app.use(routes); //using the routes for handling all the endpoints of the application
 
