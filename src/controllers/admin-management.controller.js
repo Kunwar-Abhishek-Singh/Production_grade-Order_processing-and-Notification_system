@@ -90,4 +90,52 @@ const getAdminById = async (req, res) => {
 };
 
 
-module.exports = { createAdmin, getAdmins, getAdminById };
+const updateAdminRole = async (req, res) => {
+  const { id } = req.validated.params;
+  const { role } = req.validated.body;
+  const requesterId = req.session.admin.id;
+
+  const targetAdmin = await Admin.findById(id);
+
+  if (!targetAdmin) {
+    throw new AppError("Admin account not found", 404);
+  }
+
+  // Prevent a superadmin from demoting their own account.
+  if (requesterId === targetAdmin._id.toString() && role !== "superadmin") {
+    throw new AppError("You cannot demote your own superadmin account", 400);
+  }
+
+  // If a superadmin is being demoted, ensure another one exists.
+  if (targetAdmin.role === "superadmin" && role !== "superadmin") {
+    const otherSuperadminCount = await Admin.countDocuments({
+      role: "superadmin",
+      _id: { $ne: targetAdmin._id }
+    });
+
+    if (otherSuperadminCount === 0) {
+      throw new AppError(
+        "Cannot demote the last superadmin account",
+        409
+      );
+    }
+  }
+
+  targetAdmin.role = role;
+  await targetAdmin.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Admin role updated successfully",
+    data: {
+      id: targetAdmin._id,
+      email: targetAdmin.email,
+      role: targetAdmin.role,
+      updatedAt: targetAdmin.updatedAt
+    }
+  });
+};
+
+
+
+module.exports = { createAdmin, getAdmins, getAdminById, updateAdminRole};

@@ -34,6 +34,10 @@ const {
 } = require("../validators/admin-details.validator");
 
 const {
+  updateAdminRoleSchema
+} = require("../validators/update-admin-role.validator");
+
+const {
   getOrdersPage
 } = require("../controllers/admin-order.controller");
 
@@ -50,7 +54,8 @@ const {
 const {
   createAdmin,
   getAdmins,
-  getAdminById
+  getAdminById,
+  updateAdminRole
 } = require("../controllers/admin-management.controller");
 
 
@@ -97,6 +102,14 @@ router.get(
   authorizeRoles("superadmin"),
   validate(adminDetailsSchema),
   asyncHandler(getAdminById)
+);
+
+router.patch(
+  "/admins/:id/role",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  validate(updateAdminRoleSchema),
+  asyncHandler(updateAdminRole)
 );
 
 
