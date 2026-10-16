@@ -22,6 +22,13 @@ const statuses = [
 
 const adminAgent = request.agent(app);
 
+const regularAdminAgent = request.agent(app);
+
+const regularAdmin = {
+  email: "regular-admin-test@example.com",
+  password: "RegularAdminPassword123!"
+};
+
 const testAdmin = {
   email: "admin-test@example.com",
   password: "TestAdminPassword123!"
@@ -49,6 +56,12 @@ before(async () => {
     passwordHash: testAdmin.password,
     role: "superadmin"
   });
+
+  await Admin.create({
+  email: regularAdmin.email,
+  passwordHash: regularAdmin.password,
+  role: "admin"
+});
 
   const orders = Array.from({ length: 12 }, (_, index) => ({
     productId: `product_${String(index + 1).padStart(2, "0")}`,
@@ -194,6 +207,73 @@ test("Dashboard shows zero statistics when there are no orders", async () => {
   // The page should not crash when the aggregation returns no groups.
   assert.doesNotMatch(response.text, /Internal Server Error/);
 });
+
+
+test("Unauthenticated users cannot create admins", async () => {
+  const response = await request(app)
+    .post("/admin/admins")
+    .send({
+      email: "new-admin@example.com",
+      password: "NewAdminPassword123!",
+      role: "admin"
+    });
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/admin/login");
+});
+
+test("Regular admins cannot create admin accounts", async () => {
+  const loginResponse = await regularAdminAgent
+    .post("/admin/login")
+    .type("form")
+    .send({
+      email: regularAdmin.email,
+      password: regularAdmin.password
+    });
+
+  assert.equal(loginResponse.status, 302);
+
+  const response = await regularAdminAgent
+    .post("/admin/admins")
+    .send({
+      email: "created-by-admin@example.com",
+      password: "CreatedAdminPassword123!",
+      role: "admin"
+    });
+
+  assert.equal(response.status, 403);
+});
+
+test("Superadmins can create admin accounts", async () => {
+  const response = await adminAgent
+    .post("/admin/admins")
+    .send({
+      email: "created-admin@example.com",
+      password: "CreatedAdminPassword123!",
+      role: "admin"
+    });
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.email, "created-admin@example.com");
+  assert.equal(response.body.data.role, "admin");
+
+  assert.equal("passwordHash" in response.body.data, false);
+  assert.equal("password" in response.body.data, false);
+});
+
+test("Creating an admin with a duplicate email returns 409", async () => {
+  const response = await adminAgent
+    .post("/admin/admins")
+    .send({
+      email: testAdmin.email,
+      password: "AnotherPassword123!",
+      role: "admin"
+    });
+
+  assert.equal(response.status, 409);
+});
+
 
 
 test("Logout destroys the session and blocks dashboard access", async () => {

@@ -10,9 +10,6 @@ const redirectIfAuthenticated = require(
   "../middleware/redirect-if-authenticated.middleware"
 );
 
-const authorizeRoles = require(
-  "../middleware/authorize-roles.middleware"
-);
 
 const authorizeRoles = require(
   "../middleware/authorize-roles.middleware"
