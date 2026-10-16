@@ -275,6 +275,79 @@ test("Creating an admin with a duplicate email returns 409", async () => {
 });
 
 
+test("Unauthenticated users cannot list admins", async () => {
+  const response = await request(app)
+    .get("/admin/admins");
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/admin/login");
+});
+
+
+
+test("Regular admins cannot list admin accounts", async () => {
+  await regularAdminAgent
+    .post("/admin/login")
+    .type("form")
+    .send(regularAdmin);
+
+  const response = await regularAdminAgent
+    .get("/admin/admins");
+
+  assert.equal(response.status, 403);
+  assert.equal(
+    response.body.message,
+    "You do not have permission to perform this action"
+  );
+});
+
+
+test("Superadmins can list admins with pagination and safe fields", async () => {
+  const response = await adminAgent
+    .get("/admin/admins?page=1&limit=2");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.success, true);
+
+  // Pagination
+  assert.equal(response.body.pagination.page, 1);
+  assert.equal(response.body.pagination.limit, 2);
+  assert.ok(response.body.pagination.totalAdmins >= 3);
+  assert.equal(
+    response.body.pagination.totalPages,
+    Math.ceil(response.body.pagination.totalAdmins / 2)
+  );
+
+  // Only two admins should be returned on this page.
+  assert.equal(response.body.data.length, 2);
+
+  // Verify that sensitive fields are never exposed.
+  for (const admin of response.body.data) {
+    assert.ok(admin.id);
+    assert.ok(admin.email);
+    assert.ok(admin.role);
+    assert.equal("passwordHash" in admin, false);
+    assert.equal("password" in admin, false);
+  }
+});
+
+
+
+
+test("Admin listing rejects invalid pagination parameters", async () => {
+  const invalidPageResponse = await adminAgent
+    .get("/admin/admins?page=0&limit=10");
+
+  assert.equal(invalidPageResponse.status, 400);
+
+  const invalidLimitResponse = await adminAgent
+    .get("/admin/admins?page=1&limit=101");
+
+  assert.equal(invalidLimitResponse.status, 400);
+});
+
+
+
 
 test("Logout destroys the session and blocks dashboard access", async () => {
   const logoutResponse = await adminAgent.post("/admin/logout");
@@ -287,4 +360,8 @@ test("Logout destroys the session and blocks dashboard access", async () => {
   assert.equal(dashboardResponse.status, 302);
   assert.equal(dashboardResponse.headers.location, "/admin/login");
 });
+
+
+
+
 

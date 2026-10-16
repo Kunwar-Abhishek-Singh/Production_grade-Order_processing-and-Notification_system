@@ -25,6 +25,10 @@ const {
   createAdminSchema
 } = require("../validators/create-admin.validator");
 
+const { adminListSchema } = require(
+  "../validators/admin-list.validator"
+);
+
 const {
   getOrdersPage
 } = require("../controllers/admin-order.controller");
@@ -40,7 +44,8 @@ const {
 } = require("../controllers/admin-auth.controller");
 
 const {
-  createAdmin
+  createAdmin,
+  getAdmins
 } = require("../controllers/admin-management.controller");
 
 
@@ -69,6 +74,15 @@ router.post(
   authorizeRoles("superadmin"),
   validate(createAdminSchema),
   asyncHandler(createAdmin)
+);
+
+// List admin accounts, accessible only to superadmins.
+router.get(
+  "/admins",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  validate(adminListSchema),
+  asyncHandler(getAdmins)
 );
 
 // Protect order dashboard and all nested order routes.
