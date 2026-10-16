@@ -14,11 +14,19 @@ const authorizeRoles = require(
   "../middleware/authorize-roles.middleware"
 );
 
+const authorizeRoles = require(
+  "../middleware/authorize-roles.middleware"
+);
+
 const { adminLoginSchema } = require("../validators/admin-login.validator");
 
 const {
   adminOrdersSchema
 } = require("../validators/admin-orders.validator");
+
+const {
+  createAdminSchema
+} = require("../validators/create-admin.validator");
 
 const {
   getOrdersPage
@@ -33,6 +41,10 @@ const {
   login,
   logout
 } = require("../controllers/admin-auth.controller");
+
+const {
+  createAdmin
+} = require("../controllers/admin-management.controller");
 
 
 
@@ -53,6 +65,14 @@ router.post(
 );
 
 router.post("/logout", requireAdmin, logout);
+
+router.post(
+  "/admins",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  validate(createAdminSchema),
+  asyncHandler(createAdmin)
+);
 
 // Protect order dashboard and all nested order routes.
 router.use("/orders", requireAdmin);
