@@ -262,6 +262,8 @@ test("Superadmins can create admin accounts", async () => {
   assert.equal("password" in response.body.data, false);
 });
 
+
+
 test("Creating an admin with a duplicate email returns 409", async () => {
   const response = await adminAgent
     .post("/admin/admins")
@@ -410,6 +412,177 @@ test("Regular admins cannot retrieve admin details", async () => {
   );
 });
 
+
+
+
+test("Superadmins can update an admin role", async () => {
+  const targetAdmin = await Admin.findOne({
+    email: "created-admin@example.com"
+  });
+
+  assert.ok(targetAdmin, "Target admin should exist");
+  assert.equal(targetAdmin.role, "admin");
+
+  const response = await adminAgent
+    .patch(`/admin/admins/${targetAdmin._id}/role`)
+    .send({ role: "superadmin" });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.role, "superadmin");
+  assert.equal(response.body.data.email, targetAdmin.email);
+
+  assert.equal("passwordHash" in response.body.data, false);
+  assert.equal("password" in response.body.data, false);
+
+  const updatedAdmin = await Admin.findById(targetAdmin._id);
+  assert.equal(updatedAdmin.role, "superadmin");
+});
+
+
+
+test("Superadmins cannot demote their own account", async () => {
+  const superadmin = await Admin.findOne({
+    email: testAdmin.email
+  });
+
+  assert.ok(superadmin, "Superadmin should exist");
+  assert.equal(superadmin.role, "superadmin");
+
+  const response = await adminAgent
+    .patch(`/admin/admins/${superadmin._id}/role`)
+    .send({ role: "admin" });
+
+  assert.equal(response.status, 400);
+  assert.equal(
+    response.body.message,
+    "You cannot demote your own superadmin account"
+  );
+
+  const unchangedAdmin = await Admin.findById(superadmin._id);
+  assert.equal(unchangedAdmin.role, "superadmin");
+});
+
+
+
+test("Cannot demote the last remaining superadmin", async () => {
+  const target = await Admin.create({
+    email: "last-superadmin-test@example.com",
+    passwordHash: "LastSuperadminPassword123!",
+    role: "superadmin"
+  });
+
+  const otherSuperadmins = await Admin.find({
+    role: "superadmin",
+    _id: { $ne: target._id }
+  });
+
+  const originalRoles = otherSuperadmins.map((admin) => ({
+    id: admin._id,
+    role: admin.role
+  }));
+
+  try {
+    await Admin.updateMany(
+      {
+        role: "superadmin",
+        _id: { $ne: target._id }
+      },
+      { $set: { role: "admin" } }
+    );
+
+    const response = await adminAgent
+      .patch(`/admin/admins/${target._id}/role`)
+      .send({ role: "admin" });
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      response.body.message,
+      "Cannot demote the last superadmin account"
+    );
+
+    const unchangedTarget = await Admin.findById(target._id);
+    assert.equal(unchangedTarget.role, "superadmin");
+  } finally {
+    for (const admin of originalRoles) {
+      await Admin.updateOne(
+        { _id: admin.id },
+        { $set: { role: admin.role } }
+      );
+    }
+
+    await Admin.deleteOne({ _id: target._id });
+  }
+});
+
+
+
+test("Updating a nonexistent admin returns 404", async () => {
+  const nonexistentId = new mongoose.Types.ObjectId();
+
+  const response = await adminAgent
+    .patch(`/admin/admins/${nonexistentId}/role`)
+    .send({ role: "admin" });
+
+  assert.equal(response.status, 404);
+  assert.equal(response.body.message, "Admin account not found");
+});
+
+
+test("Updating an admin with an invalid role returns 400", async () => {
+  const targetAdmin = await Admin.findOne({
+    email: "created-admin@example.com"
+  });
+
+  assert.ok(targetAdmin);
+
+  const originalRole = targetAdmin.role;
+
+  const response = await adminAgent
+    .patch(`/admin/admins/${targetAdmin._id}/role`)
+    .send({ role: "owner" });
+
+  assert.equal(response.status, 400);
+
+  const unchangedAdmin = await Admin.findById(targetAdmin._id);
+  assert.equal(unchangedAdmin.role, originalRole);
+});
+
+
+
+test("Unauthenticated users cannot update admin roles", async () => {
+  const response = await request(app)
+    .patch("/admin/admins/671a4e2c9b8f123456789abc/role")
+    .send({ role: "admin" });
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/admin/login");
+});
+
+
+
+test("Regular admins cannot update admin roles", async () => {
+  const targetAdmin = await Admin.findOne({
+    email: "created-admin@example.com"
+  });
+
+  assert.ok(targetAdmin);
+
+  const originalRole = targetAdmin.role;
+
+  const response = await regularAdminAgent
+    .patch(`/admin/admins/${targetAdmin._id}/role`)
+    .send({ role: "admin" });
+
+  assert.equal(response.status, 403);
+  assert.equal(
+    response.body.message,
+    "You do not have permission to perform this action"
+  );
+
+  const unchangedAdmin = await Admin.findById(targetAdmin._id);
+  assert.equal(unchangedAdmin.role, originalRole);
+});
 
 
 test("Logout destroys the session and blocks dashboard access", async () => {
