@@ -274,6 +274,18 @@ test("Creating an admin with a duplicate email returns 409", async () => {
     });
 
   assert.equal(response.status, 409);
+
+  console.log(
+  "Test database:",
+  mongoose.connection.name
+);
+
+console.log(
+  "Admin indexes:",
+  await Admin.collection.indexes()
+);
+
+
 });
 
 
