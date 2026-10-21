@@ -59,6 +59,14 @@ const {
 } = require("../controllers/admin-management.controller");
 
 
+const {
+  getAdminsPage,
+  getNewAdminPage,
+  getEditAdminPage
+} = require("../controllers/admin-pages.controller");
+
+
+
 
 const router = express.Router();
 
@@ -78,6 +86,8 @@ router.post(
 
 router.post("/logout", requireAdmin, logout);
 
+
+
 router.post(
   "/admins",
   requireAdmin,
@@ -85,6 +95,29 @@ router.post(
   validate(createAdminSchema),
   asyncHandler(createAdmin)
 );
+
+
+router.get(
+  "/admin-management",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  asyncHandler(getAdminsPage)
+);
+
+router.get(
+  "/admin-management/new",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  getNewAdminPage
+);
+
+router.get(
+  "/admin-management/:id/edit",
+  requireAdmin,
+  authorizeRoles("superadmin"),
+  asyncHandler(getEditAdminPage)
+);
+
 
 // List admin accounts, accessible only to superadmins.
 router.get(

@@ -12,7 +12,8 @@
 
 <div class="table-card admin-form-card">
   <% if (error) { %>
-    <div class="alert-error"><%= error %></div>
+    <div id="form-error" class="alert-error" style="display: none;"></div>
+
   <% } %>
 
   <div class="form-group">
@@ -25,24 +26,64 @@
     <input type="text" value="<%= admin.role %>" disabled>
   </div>
 
-  <form
-    action="/admin/admins/<%= admin._id %>/role"
-    method="POST"
-  >
-    <div class="form-group">
-      <label for="role">New role</label>
-      <select id="role" name="role" required>
-        <option value="admin" <%= admin.role === "admin" ? "selected" : "" %>>
-          Admin
-        </option>
-        <option value="superadmin" <%= admin.role === "superadmin" ? "selected" : "" %>>
-          Superadmin
-        </option>
-      </select>
-    </div>
+  <form id="edit-admin-form">
+  <div class="form-group">
+    <label for="role">New role</label>
 
-    <button type="submit" class="button-primary">
-      Update role
-    </button>
-  </form>
+    <select id="role" name="role" required>
+      <option
+        value="admin"
+        <%= admin.role === "admin" ? "selected" : "" %>
+      >
+        Admin
+      </option>
+
+      <option
+        value="superadmin"
+        <%= admin.role === "superadmin" ? "selected" : "" %>
+      >
+        Superadmin
+      </option>
+    </select>
+  </div>
+
+  <button type="submit" class="button-primary">
+    Update role
+  </button>
+</form>
+
+<script>
+  const editForm = document.getElementById("edit-admin-form");
+  const errorBox = document.getElementById("form-error");
+
+  editForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    errorBox.style.display = "none";
+
+    const role = new FormData(editForm).get("role");
+
+    try {
+      const response = await fetch(
+        "/admin/admins/<%= admin._id %>/role",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Could not update admin role.");
+      }
+
+      window.location.assign("/admin/admin-management");
+    } catch (error) {
+      errorBox.textContent = error.message || "Something went wrong.";
+      errorBox.style.display = "block";
+    }
+  });
+</script>
 </div>
