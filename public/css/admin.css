@@ -534,3 +534,34 @@ th {
     padding: 24px;
   }
 }
+
+/* for admin page */
+
+.admin-role-badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #eef2f7;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
+.role-superadmin {
+  color: #6941c6;
+  background: #f0eaff;
+}
+
+.role-admin {
+  color: #2455b8;
+  background: #e8efff;
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+

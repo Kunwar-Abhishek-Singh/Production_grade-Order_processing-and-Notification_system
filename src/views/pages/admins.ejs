@@ -1,0 +1,92 @@
+
+<div class="page-intro">
+  <div>
+    <h2>Admin accounts</h2>
+    <p>Manage administrator accounts and their access levels.</p>
+  </div>
+
+  <div class="pagination-actions">
+    <div class="total-count">
+      <strong><%= pagination.totalAdmins %></strong>
+      <span>Total administrators</span>
+    </div>
+
+    <a href="/admin/admins/new" class="button-primary">
+      + Add Admin
+    </a>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Created</th>
+          <th>Last Updated</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% if (admins.length === 0) { %>
+          <tr>
+            <td colspan="5" class="empty-state">
+              No admin accounts found.
+            </td>
+          </tr>
+        <% } %>
+
+        <% admins.forEach((admin) => { %>
+          <tr>
+            <td class="product-id"><%= admin.email %></td>
+            <td>
+              <span class="admin-role-badge role-<%= admin.role %>">
+                <%= admin.role %>
+              </span>
+            </td>
+            <td><%= new Date(admin.createdAt).toLocaleString() %></td>
+            <td><%= new Date(admin.updatedAt).toLocaleString() %></td>
+            <td>
+              <a
+                class="view-link"
+                href="/admin/admins/<%= admin._id %>/edit"
+              >
+                Edit
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-bar">
+    <span>
+      Page <%= pagination.page %> of
+      <%= Math.max(1, pagination.totalPages) %>
+    </span>
+
+    <div class="pagination-actions">
+      <% if (pagination.page > 1) { %>
+        <a
+          class="button-secondary"
+          href="/admin/admins?page=<%= pagination.page - 1 %>"
+        >
+          Previous
+        </a>
+      <% } %>
+
+      <% if (pagination.page < pagination.totalPages) { %>
+        <a
+          class="button-secondary"
+          href="/admin/admins?page=<%= pagination.page + 1 %>"
+        >
+          Next
+        </a>
+      <% } %>
+    </div>
+  </div>
+</div>
