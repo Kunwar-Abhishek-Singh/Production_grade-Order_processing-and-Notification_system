@@ -17,6 +17,8 @@ const {
     ensureAdminRoleGuardExists
 } = require("../src/services/system-guard.service");
 
+
+
 const statuses = [
     "pending",
     "processing",
@@ -55,6 +57,9 @@ before(async () => {
 
     // Recreate the Admin model's indexes after dropping the database.
     await Admin.createIndexes();
+
+    // Recreate the shared guard required by role-update transactions.
+    await ensureAdminRoleGuardExists();
 
     console.log("Indexes after recreation:", await Admin.collection.indexes());
 
