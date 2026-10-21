@@ -5,16 +5,9 @@
     <p>Manage administrator accounts and their access levels.</p>
   </div>
 
-  <div class="pagination-actions">
-    <div class="total-count">
-      <strong><%= pagination.totalAdmins %></strong>
-      <span>Total administrators</span>
-    </div>
-
-    <a href="/admin/admins/new" class="button-primary">
-      + Add Admin
-    </a>
-  </div>
+  <a href="/admin/admins/new" class="button-primary">
+    + Create Admin
+  </a>
 </div>
 
 <div class="table-card">
@@ -25,8 +18,8 @@
           <th>Email</th>
           <th>Role</th>
           <th>Created</th>
-          <th>Last Updated</th>
-          <th>Action</th>
+          <th>Updated</th>
+          <th>Actions</th>
         </tr>
       </thead>
 
@@ -41,20 +34,28 @@
 
         <% admins.forEach((admin) => { %>
           <tr>
-            <td class="product-id"><%= admin.email %></td>
+            <td><strong><%= admin.email %></strong></td>
+
             <td>
-              <span class="admin-role-badge role-<%= admin.role %>">
+              <span class="admin-role-badge <%= admin.role === 'superadmin' ? 'role-superadmin' : 'role-admin' %>">
                 <%= admin.role %>
               </span>
             </td>
-            <td><%= new Date(admin.createdAt).toLocaleString() %></td>
-            <td><%= new Date(admin.updatedAt).toLocaleString() %></td>
+
+            <td>
+              <%= admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : "—" %>
+            </td>
+
+            <td>
+              <%= admin.updatedAt ? new Date(admin.updatedAt).toLocaleDateString() : "—" %>
+            </td>
+
             <td>
               <a
                 class="view-link"
                 href="/admin/admins/<%= admin._id %>/edit"
               >
-                Edit
+                Edit role
               </a>
             </td>
           </tr>
@@ -65,8 +66,7 @@
 
   <div class="pagination-bar">
     <span>
-      Page <%= pagination.page %> of
-      <%= Math.max(1, pagination.totalPages) %>
+      <%= pagination.totalAdmins %> admin account(s)
     </span>
 
     <div class="pagination-actions">
@@ -78,6 +78,10 @@
           Previous
         </a>
       <% } %>
+
+      <span class="page-number">
+        Page <%= pagination.page %> of <%= Math.max(1, pagination.totalPages) %>
+      </span>
 
       <% if (pagination.page < pagination.totalPages) { %>
         <a

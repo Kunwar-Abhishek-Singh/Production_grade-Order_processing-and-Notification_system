@@ -565,3 +565,43 @@ th {
   flex-wrap: wrap;
 }
 
+
+.admin-role-badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.role-superadmin {
+  background: #eee7ff;
+  color: #6338a5;
+}
+
+.role-admin {
+  background: #e4f2ff;
+  color: #155b91;
+}
+
+.admin-form-card {
+  max-width: 680px;
+  padding: 24px;
+}
+
+.admin-form-card form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-form-card .button-primary {
+  justify-self: start;
+}
+
+.admin-form-card input:disabled {
+  background: #f1f3f7;
+  color: #687386;
+  cursor: not-allowed;
+}
+

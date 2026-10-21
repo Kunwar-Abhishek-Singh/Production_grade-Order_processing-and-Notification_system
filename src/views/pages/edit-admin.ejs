@@ -1,0 +1,48 @@
+
+<div class="page-intro">
+  <div>
+    <h2>Edit admin role</h2>
+    <p>Update permissions for this administrator account.</p>
+  </div>
+
+  <a href="/admin/admins" class="button-secondary">
+    Back to admins
+  </a>
+</div>
+
+<div class="table-card admin-form-card">
+  <% if (error) { %>
+    <div class="alert-error"><%= error %></div>
+  <% } %>
+
+  <div class="form-group">
+    <label>Email address</label>
+    <input type="email" value="<%= admin.email %>" disabled>
+  </div>
+
+  <div class="form-group">
+    <label>Current role</label>
+    <input type="text" value="<%= admin.role %>" disabled>
+  </div>
+
+  <form
+    action="/admin/admins/<%= admin._id %>/role"
+    method="POST"
+  >
+    <div class="form-group">
+      <label for="role">New role</label>
+      <select id="role" name="role" required>
+        <option value="admin" <%= admin.role === "admin" ? "selected" : "" %>>
+          Admin
+        </option>
+        <option value="superadmin" <%= admin.role === "superadmin" ? "selected" : "" %>>
+          Superadmin
+        </option>
+      </select>
+    </div>
+
+    <button type="submit" class="button-primary">
+      Update role
+    </button>
+  </form>
+</div>

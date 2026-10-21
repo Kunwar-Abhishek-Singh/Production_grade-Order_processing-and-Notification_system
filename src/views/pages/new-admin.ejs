@@ -1,0 +1,55 @@
+
+<div class="page-intro">
+  <div>
+    <h2>Create an admin account</h2>
+    <p>Provide the account details and assign an appropriate role.</p>
+  </div>
+
+  <a href="/admin/admins" class="button-secondary">
+    Back to admins
+  </a>
+</div>
+
+<div class="table-card admin-form-card">
+  <% if (error) { %>
+    <div class="alert-error"><%= error %></div>
+  <% } %>
+
+  <form action="/admin/admins/create" method="POST">
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input
+        id="email"
+        type="email"
+        name="email"
+        value="<%= formData.email %>"
+        required
+        autocomplete="email"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="password">Temporary password</label>
+      <input
+        id="password"
+        type="password"
+        name="password"
+        required
+        minlength="8"
+        autocomplete="new-password"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="role">Role</label>
+      <select id="role" name="role" required>
+        <option value="admin" selected>Admin</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
+    </div>
+
+    <button type="submit" class="button-primary">
+      Create account
+    </button>
+  </form>
+</div>
