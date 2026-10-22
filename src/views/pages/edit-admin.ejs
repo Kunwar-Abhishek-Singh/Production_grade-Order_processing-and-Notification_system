@@ -5,56 +5,71 @@
     <p>Update permissions for this administrator account.</p>
   </div>
 
-  <a href="/admin/admins" class="button-secondary">
+  <a href="/admin/admin-management" class="button-secondary">
     Back to admins
   </a>
 </div>
 
 <div class="table-card admin-form-card">
-  <% if (error) { %>
-    <div id="form-error" class="alert-error" style="display: none;"></div>
-
-  <% } %>
+  <div
+    id="form-error"
+    class="alert-error"
+    style="display: none;"
+  ></div>
 
   <div class="form-group">
-    <label>Email address</label>
-    <input type="email" value="<%= admin.email %>" disabled>
+    <label for="admin-email">Email address</label>
+    <input
+      id="admin-email"
+      type="email"
+      value="<%= admin.email %>"
+      disabled
+    >
   </div>
 
   <div class="form-group">
-    <label>Current role</label>
-    <input type="text" value="<%= admin.role %>" disabled>
+    <label for="current-role">Current role</label>
+    <input
+      id="current-role"
+      type="text"
+      value="<%= admin.role %>"
+      disabled
+    >
   </div>
 
   <form id="edit-admin-form">
-  <div class="form-group">
-    <label for="role">New role</label>
+    <div class="form-group">
+      <label for="role">New role</label>
 
-    <select id="role" name="role" required>
-      <option
-        value="admin"
-        <%= admin.role === "admin" ? "selected" : "" %>
-      >
-        Admin
-      </option>
+      <select id="role" name="role" required>
+        <option
+          value="admin"
+          <%= admin.role === "admin" ? "selected" : "" %>
+        >
+          Admin
+        </option>
 
-      <option
-        value="superadmin"
-        <%= admin.role === "superadmin" ? "selected" : "" %>
-      >
-        Superadmin
-      </option>
-    </select>
-  </div>
+        <option
+          value="superadmin"
+          <%= admin.role === "superadmin" ? "selected" : "" %>
+        >
+          Superadmin
+        </option>
+      </select>
+    </div>
 
-  <button type="submit" class="button-primary">
-    Update role
-  </button>
-</form>
+    <button type="submit" class="button-primary">
+      Update role
+    </button>
+  </form>
+</div>
 
 <script>
   const editForm = document.getElementById("edit-admin-form");
   const errorBox = document.getElementById("form-error");
+  const submitButton = editForm.querySelector(
+    'button[type="submit"]'
+  );
 
   editForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -63,12 +78,17 @@
 
     const role = new FormData(editForm).get("role");
 
+    submitButton.disabled = true;
+    submitButton.textContent = "Updating role...";
+
     try {
       const response = await fetch(
         "/admin/admins/<%= admin._id %>/role",
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({ role })
         }
       );
@@ -76,14 +96,20 @@
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Could not update admin role.");
+        throw new Error(
+          result.message || "Could not update admin role."
+        );
       }
 
       window.location.assign("/admin/admin-management");
     } catch (error) {
-      errorBox.textContent = error.message || "Something went wrong.";
+      errorBox.textContent =
+        error.message || "Something went wrong.";
+
       errorBox.style.display = "block";
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Update role";
     }
   });
 </script>
-</div>

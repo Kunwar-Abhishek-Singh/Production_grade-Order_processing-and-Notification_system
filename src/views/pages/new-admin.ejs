@@ -1,80 +1,108 @@
-<div class="page-intro">
-    <div>
-        <h2>Create an admin account</h2>
-        <p>Provide the account details and assign an appropriate role.</p>
-    </div>
 
-    <a href="/admin/admins" class="button-secondary">
-        Back to admins
-    </a>
+<div class="page-intro">
+  <div>
+    <h2>Create an admin account</h2>
+    <p>Provide the account details and assign an appropriate role.</p>
+  </div>
+
+  <a href="/admin/admin-management" class="button-secondary">
+    Back to admins
+  </a>
 </div>
 
 <div class="table-card admin-form-card">
-    <% if (error) { %>
-        <div id="form-error" class="alert-error" hidden>
-            <%= error %>
-        </div>
-        <% } %>
+  <div id="form-error" class="alert-error" hidden></div>
 
-            <form id="create-admin-form" action="/admin/admins/create" method="POST">
-                <div class="form-group">
-                    <label for="email">Email address</label>
-                    <input id="email" type="email" name="email" value="<%= formData.email %>" required
-                        autocomplete="email">
-                </div>
+  <form id="create-admin-form">
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input
+        id="email"
+        type="email"
+        name="email"
+        value="<%= formData.email %>"
+        required
+        autocomplete="email"
+      >
+    </div>
 
-                <div class="form-group">
-                    <label for="password">Temporary password</label>
-                    <input id="password" type="password" name="password" required minlength="8"
-                        autocomplete="new-password">
-                </div>
+    <div class="form-group">
+      <label for="password">Temporary password</label>
+      <input
+        id="password"
+        type="password"
+        name="password"
+        required
+        minlength="8"
+        autocomplete="new-password"
+      >
+    </div>
 
-                <div class="form-group">
-                    <label for="role">Role</label>
-                    <select id="role" name="role" required>
-                        <option value="admin" selected>Admin</option>
-                        <option value="superadmin">Superadmin</option>
-                    </select>
-                </div>
+    <div class="form-group">
+      <label for="role">Role</label>
+      <select id="role" name="role" required>
+        <option value="admin">Admin</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
+    </div>
 
-                <button type="submit" class="button-primary">
-                    Create account
-                </button>
-            </form>
-
-            <script>
-  const createForm = document.getElementById("create-admin-form");
-  const errorBox = document.getElementById("form-error");
-
-  createForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    errorBox.hidden = true;
-
-    const formData = new FormData(createForm);
-    const payload = Object.fromEntries(formData.entries());
-
-    try {
-      const response = await fetch("/admin/admins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Could not create admin.");
-      }
-
-      window.location.assign("/admin/admin-management");
-    } catch (error) {
-      errorBox.textContent = error.message || "Something went wrong.";
-      errorBox.hidden = false;
-    }
-  });
-</script>
+    <button type="submit" id="create-admin-button" class="button-primary">
+      Create account
+    </button>
+  </form>
 </div>
 
+<script>
+  (() => {
+    const createForm = document.getElementById("create-admin-form");
+    const errorBox = document.getElementById("form-error");
+    const submitButton = document.getElementById("create-admin-button");
 
+    if (!createForm || !errorBox || !submitButton) {
+      console.error("Create-admin form elements were not found.");
+      return;
+    }
 
+    createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      errorBox.hidden = true;
+      errorBox.textContent = "";
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating...";
+
+      const formData = new FormData(createForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch("/admin/admins", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || "Could not create admin account."
+          );
+        }
+
+        window.location.assign("/admin/admin-management");
+      } catch (error) {
+        errorBox.textContent =
+          error.message || "Something went wrong. Please try again.";
+
+        errorBox.hidden = false;
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Create account";
+      }
+    });
+  })();
+</script>
