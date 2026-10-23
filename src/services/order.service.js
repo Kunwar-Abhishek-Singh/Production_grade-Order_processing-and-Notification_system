@@ -1,17 +1,30 @@
-const Order = require('../models/order.model'); //importing the Order model which is used to interact with the orders collection in the database
+
+const Order = require("../models/order.model");
+const { notificationQueue } = require("../queues/notification.queue");
 
 const createOrder = async (orderData) => {
-    const order = await Order.create(orderData); //creating a new order in the database using the Order model
-    return order; //returning the created order
+  // 1. Persist the order first.
+  const order = await Order.create(orderData);
+
+  // 2. Enqueue a notification job using the saved order ID.
+  await notificationQueue.add(
+    "order-created",
+    {
+      orderId: order._id.toString()
+    },
+    {
+      jobId: `order-created-${order._id}`
+    }
+  );
+
+  return order;
 };
 
 const getOrderById = async (orderId) => {
-    const order = await Order.findById(orderId); //finding an order in the database by its ID using the Order model
-    return order; //returning the found order
+  return Order.findById(orderId);
 };
 
-
 module.exports = {
-    createOrder,
-    getOrderById //exporting both functions to be used in other files
+  createOrder,
+  getOrderById
 };
