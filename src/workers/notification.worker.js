@@ -1,6 +1,5 @@
 
-const { Worker } = require("bullmq");
-const IORedis = require("ioredis");
+const { Worker, UnrecoverableError } = require("bullmq"); const IORedis = require("ioredis");
 const mongoose = require("mongoose");
 
 const { config } = require("../config/env");
@@ -31,16 +30,13 @@ const startWorker = async () => {
   notificationWorker = new Worker(
     QUEUE_NAME,
     async (job) => {
-      if (job.name === "test-retry") {
-        console.log(
-          `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
-        );
 
-        throw new Error("Intentional failure for exponential backoff test");
-      }
+
 
       if (job.name !== "order-created") {
-        throw new Error(`Unsupported job type: ${job.name}`);
+        throw new UnrecoverableError(
+          `Unsupported job type: ${job.name}`
+        );
       }
 
       const { orderId } = job.data;
@@ -48,7 +44,9 @@ const startWorker = async () => {
       const order = await Order.findById(orderId);
 
       if (!order) {
-        throw new Error(`Order not found: ${orderId}`);
+        throw new UnrecoverableError(
+          `Order not found: ${orderId}`
+        );
       }
 
       // Simulate sending a notification for now.
