@@ -5,7 +5,9 @@ const mongoose = require("mongoose");
 const { config } = require("../config/env");
 const connectDB = require("../config/database");
 const Order = require("../models/order.model");
-
+const {
+  notificationDLQ
+} = require("../queues/notification-dlq.queue");
 const QUEUE_NAME = "order-notifications";
 
 if (!config.redis.redisUrl) {
@@ -76,12 +78,61 @@ const startWorker = async () => {
     console.log(`Job ${job.id} completed:`, result);
   });
 
-  notificationWorker.on("failed", (job, error) => {
-    console.error(
-      `Job ${job?.id ?? "unknown"} failed:`,
-      error.message
-    );
+  // notificationWorker.on("failed", (job, error) => {
+  //   console.error(
+  //     `Job ${job?.id ?? "unknown"} failed:`,
+  //     error.message
+  //   );
+  // });
+
+
+  notificationWorker.on("failed", async (job, error) => {
+    if (!job) {
+      console.error("A job failed without a job reference:", error.message);
+      return;
+    }
+
+    const isPermanent =
+      error instanceof UnrecoverableError;
+
+    const attemptsExhausted =
+      job.attemptsMade >= job.opts.attempts;
+
+    if (!isPermanent && !attemptsExhausted) {
+      console.error(
+        `Job ${job.id} failed on attempt ${job.attemptsMade}; retry may follow:`,
+        error.message
+      );
+      return;
+    }
+
+    try {
+      await notificationDLQ.add(
+        "notification-dead-letter",
+        {
+          originalJobId: job.id,
+          originalJobName: job.name,
+          originalData: job.data,
+          attemptsMade: job.attemptsMade,
+          failedReason: error.message,
+          failedAt: new Date().toISOString()
+        },
+        {
+          jobId: `dlq-${job.id}`
+        }
+      );
+
+      console.error(
+        `Job ${job.id} moved to the DLQ after ${job.attemptsMade} attempt(s).`
+      );
+    } catch (dlqError) {
+      console.error(
+        `CRITICAL: Could not route job ${job.id} to the DLQ:`,
+        dlqError.message
+      );
+    }
   });
+
 
   notificationWorker.on("error", (error) => {
     console.error("Notification worker error:", error.message);
