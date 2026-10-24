@@ -31,6 +31,14 @@ const startWorker = async () => {
   notificationWorker = new Worker(
     QUEUE_NAME,
     async (job) => {
+      if (job.name === "test-retry") {
+        console.log(
+          `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
+        );
+
+        throw new Error("Intentional failure for exponential backoff test");
+      }
+
       if (job.name !== "order-created") {
         throw new Error(`Unsupported job type: ${job.name}`);
       }
