@@ -34,7 +34,11 @@ const startWorker = async () => {
     async (job) => {
 
 
-
+      // if (job.name === "test-permanent-failure") {
+      //   throw new UnrecoverableError(
+      //     "Intentional permanent failure for DLQ test"
+      //   );
+      // }
       if (job.name !== "order-created") {
         throw new UnrecoverableError(
           `Unsupported job type: ${job.name}`
