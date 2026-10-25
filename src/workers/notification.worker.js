@@ -5,8 +5,10 @@ const mongoose = require("mongoose");
 const { config } = require("../config/env");
 const connectDB = require("../config/database");
 const Order = require("../models/order.model");
+
 const {
-  notificationDLQ
+  notificationDLQ,
+  closeNotificationDLQ
 } = require("../queues/notification-dlq.queue");
 const QUEUE_NAME = "order-notifications";
 
@@ -25,53 +27,112 @@ connection.on("error", (error) => {
 let notificationWorker;
 let isShuttingDown = false;
 
+
+const processNotificationJob = async (job) => {
+
+   if (job.name === "test-retry-to-dlq") {
+    console.log(
+      `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
+    );
+
+    throw new Error("Intentional recoverable failure for DLQ test");
+  }
+
+  if (job.name !== "order-created") {
+    throw new UnrecoverableError(
+      `Unsupported job type: ${job.name}`
+    );
+  }
+  
+
+  const { orderId } = job.data;
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    throw new UnrecoverableError(
+      `Order not found: ${orderId}`
+    );
+  }
+
+  console.log("Processing order notification:", {
+    orderId: order._id.toString(),
+    email: order.email,
+    productId: order.productId,
+    quantity: order.quantity
+  });
+
+  console.log(
+    `Simulated notification for order ${order._id} to ${order.email}`
+  );
+
+  return {
+    orderId: order._id.toString(),
+    notificationStatus: "simulated"
+  };
+};
+
+
 const startWorker = async () => {
   // Connect to MongoDB before processing jobs.
   await connectDB();
 
   notificationWorker = new Worker(
     QUEUE_NAME,
+
     async (job) => {
+      try {
+        return await processNotificationJob(job);
+      } catch (error) {
+        const isPermanent =
+          error instanceof UnrecoverableError;
 
+        // attemptsMade counts failures before the current attempt.
+        const maxAttempts = job.opts.attempts ?? 1;
+        const isLastAttempt =
+          job.attemptsMade + 1 >= maxAttempts;
 
-      // if (job.name === "test-permanent-failure") {
-      //   throw new UnrecoverableError(
-      //     "Intentional permanent failure for DLQ test"
-      //   );
-      // }
-      if (job.name !== "order-created") {
-        throw new UnrecoverableError(
-          `Unsupported job type: ${job.name}`
-        );
+        if (isPermanent || isLastAttempt) {
+          try {
+            await notificationDLQ.add(
+              "notification-dead-letter",
+              {
+                originalJobId: job.id,
+                originalJobName: job.name,
+                originalData: job.data,
+                attemptsMade: job.attemptsMade + 1,
+                failedReason: error.message,
+                failedAt: new Date().toISOString()
+              },
+              {
+                jobId: `dlq-${job.id}`
+              }
+            );
+
+            console.error(
+              `Job ${job.id} routed to DLQ after ${job.attemptsMade + 1
+              } attempt(s).`
+            );
+          } catch (dlqError) {
+            console.error(
+              `CRITICAL: Could not route job ${job.id} to DLQ:`,
+              dlqError.message
+            );
+
+            // Throw an ordinary error so BullMQ can retry
+            // the DLQ write when attempts remain.
+            throw new Error(
+              `DLQ routing failed: ${dlqError.message}`,
+              { cause: dlqError }
+            );
+          }
+        }
+
+        // Preserve the original failure so BullMQ applies
+        // its normal retry/backoff or permanent-failure rules.
+        throw error;
       }
-
-      const { orderId } = job.data;
-
-      const order = await Order.findById(orderId);
-
-      if (!order) {
-        throw new UnrecoverableError(
-          `Order not found: ${orderId}`
-        );
-      }
-
-      // Simulate sending a notification for now.
-      console.log("Processing order notification:", {
-        orderId: order._id.toString(),
-        email: order.email,
-        productId: order.productId,
-        quantity: order.quantity
-      });
-
-      console.log(
-        `Simulated notification for order ${order._id} to ${order.email}`
-      );
-
-      return {
-        orderId: order._id.toString(),
-        notificationStatus: "simulated"
-      };
     },
+
     {
       connection,
       concurrency: 5
@@ -90,52 +151,14 @@ const startWorker = async () => {
   // });
 
 
-  notificationWorker.on("failed", async (job, error) => {
-    if (!job) {
-      console.error("A job failed without a job reference:", error.message);
-      return;
-    }
 
-    const isPermanent =
-      error instanceof UnrecoverableError;
-
-    const attemptsExhausted =
-      job.attemptsMade >= job.opts.attempts;
-
-    if (!isPermanent && !attemptsExhausted) {
-      console.error(
-        `Job ${job.id} failed on attempt ${job.attemptsMade}; retry may follow:`,
-        error.message
-      );
-      return;
-    }
-
-    try {
-      await notificationDLQ.add(
-        "notification-dead-letter",
-        {
-          originalJobId: job.id,
-          originalJobName: job.name,
-          originalData: job.data,
-          attemptsMade: job.attemptsMade,
-          failedReason: error.message,
-          failedAt: new Date().toISOString()
-        },
-        {
-          jobId: `dlq-${job.id}`
-        }
-      );
-
-      console.error(
-        `Job ${job.id} moved to the DLQ after ${job.attemptsMade} attempt(s).`
-      );
-    } catch (dlqError) {
-      console.error(
-        `CRITICAL: Could not route job ${job.id} to the DLQ:`,
-        dlqError.message
-      );
-    }
+  notificationWorker.on("failed", (job, error) => {
+    console.error(
+      `Job ${job?.id ?? "unknown"} failed:`,
+      error.message
+    );
   });
+
 
 
   notificationWorker.on("error", (error) => {
@@ -160,6 +183,8 @@ const shutdown = async (signal) => {
       await connection.quit();
     }
 
+    await closeNotificationDLQ();
+
     await mongoose.disconnect();
 
     console.log("Notification worker shut down gracefully");
@@ -180,6 +205,7 @@ startWorker().catch(async (error) => {
     if (connection.status !== "end") {
       await connection.quit();
     }
+    await closeNotificationDLQ();
     await mongoose.disconnect();
   } catch (shutdownError) {
     console.error("Cleanup failed:", shutdownError.message);
