@@ -104,7 +104,7 @@ const processNotificationJob = async (job) => {
     },
     {
       upsert: true,
-      new: true,
+      returnDocument: "after",
       setDefaultsOnInsert: true
     }
   );
