@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const { config } = require("../config/env");
 const connectDB = require("../config/database");
 const Order = require("../models/order.model");
-
+const Notification = require("../models/notification.model");
 const {
   notificationDLQ,
   closeNotificationDLQ
@@ -28,24 +28,60 @@ let notificationWorker;
 let isShuttingDown = false;
 
 
+// const processNotificationJob = async (job) => {
+
+//    if (job.name === "test-retry-to-dlq") {
+//     console.log(
+//       `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
+//     );
+
+//     throw new Error("Intentional recoverable failure for DLQ test");
+//   }
+
+//   if (job.name !== "order-created") {
+//     throw new UnrecoverableError(
+//       `Unsupported job type: ${job.name}`
+//     );
+//   }
+
+
+//   const { orderId } = job.data;
+//   const order = await Order.findById(orderId);
+
+//   if (!order) {
+//     throw new UnrecoverableError(
+//       `Order not found: ${orderId}`
+//     );
+//   }
+
+//   console.log("Processing order notification:", {
+//     orderId: order._id.toString(),
+//     email: order.email,
+//     productId: order.productId,
+//     quantity: order.quantity
+//   });
+
+//   console.log(
+//     `Simulated notification for order ${order._id} to ${order.email}`
+//   );
+
+//   return {
+//     orderId: order._id.toString(),
+//     notificationStatus: "simulated"
+//   };
+// };
+
+
+
 const processNotificationJob = async (job) => {
-
-   if (job.name === "test-retry-to-dlq") {
-    console.log(
-      `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
-    );
-
-    throw new Error("Intentional recoverable failure for DLQ test");
-  }
-
   if (job.name !== "order-created") {
     throw new UnrecoverableError(
       `Unsupported job type: ${job.name}`
     );
   }
-  
 
   const { orderId } = job.data;
+
   const order = await Order.findById(orderId);
 
   if (!order) {
@@ -54,21 +90,71 @@ const processNotificationJob = async (job) => {
     );
   }
 
-  console.log("Processing order notification:", {
-    orderId: order._id.toString(),
-    email: order.email,
-    productId: order.productId,
-    quantity: order.quantity
-  });
-
-  console.log(
-    `Simulated notification for order ${order._id} to ${order.email}`
+  // Get or create one notification record per order.
+  const notification = await Notification.findOneAndUpdate(
+    {
+      orderId: order._id,
+      type: "order_confirmation"
+    },
+    {
+      $setOnInsert: {
+        status: "pending",
+        attempts: 0
+      }
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true
+    }
   );
 
-  return {
-    orderId: order._id.toString(),
-    notificationStatus: "simulated"
-  };
+  // If this notification was already sent, skip it.
+  if (notification.status === "sent") {
+    console.log(
+      `Notification already sent for order ${orderId}. Skipping.`
+    );
+
+    return {
+      orderId: order._id.toString(),
+      notificationStatus: "already_sent"
+    };
+  }
+
+  // Mark this attempt as processing.
+  notification.status = "processing";
+  notification.attempts += 1;
+  notification.lastError = null;
+  await notification.save();
+
+  try {
+    // Simulate sending the notification.
+    console.log("Processing order notification:", {
+      orderId: order._id.toString(),
+      email: order.email,
+      productId: order.productId,
+      quantity: order.quantity
+    });
+
+    console.log(
+      `Simulated notification for order ${order._id} to ${order.email}`
+    );
+
+    notification.status = "sent";
+    notification.sentAt = new Date();
+    await notification.save();
+
+    return {
+      orderId: order._id.toString(),
+      notificationStatus: "simulated"
+    };
+  } catch (error) {
+    notification.status = "failed";
+    notification.lastError = error.message;
+    await notification.save();
+
+    throw error;
+  }
 };
 
 
