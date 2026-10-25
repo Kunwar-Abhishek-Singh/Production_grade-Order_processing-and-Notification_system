@@ -73,6 +73,7 @@ let isShuttingDown = false;
 
 
 
+
 const processNotificationJob = async (job) => {
   if (job.name !== "order-created") {
     throw new UnrecoverableError(
@@ -90,8 +91,8 @@ const processNotificationJob = async (job) => {
     );
   }
 
-  // Get or create one notification record per order.
-  const notification = await Notification.findOneAndUpdate(
+  // Step 1: Ensure one notification record exists for this order.
+  await Notification.updateOne(
     {
       orderId: order._id,
       type: "order_confirmation"
@@ -102,33 +103,67 @@ const processNotificationJob = async (job) => {
         attempts: 0
       }
     },
+    { upsert: true }
+  );
+
+  // Step 2: Atomically claim the notification.
+  // Only a pending or failed notification can be claimed.
+  const notification = await Notification.findOneAndUpdate(
     {
-      upsert: true,
-      returnDocument: "after",
-      setDefaultsOnInsert: true
+      orderId: order._id,
+      type: "order_confirmation",
+      status: { $in: ["pending", "failed"] }
+    },
+    {
+      $set: {
+        status: "processing",
+        lastError: null
+      },
+      $inc: {
+        attempts: 1
+      }
+    },
+    {
+      returnDocument: "after"
     }
   );
 
-  // If this notification was already sent, skip it.
-  if (notification.status === "sent") {
-    console.log(
-      `Notification already sent for order ${orderId}. Skipping.`
-    );
+  // Step 3: If we couldn't claim it, check why.
+  if (!notification) {
+    const existingNotification = await Notification.findOne({
+      orderId: order._id,
+      type: "order_confirmation"
+    });
 
-    return {
-      orderId: order._id.toString(),
-      notificationStatus: "already_sent"
-    };
+    if (existingNotification?.status === "sent") {
+      console.log(
+        `Notification already sent for order ${orderId}. Skipping.`
+      );
+
+      return {
+        orderId: order._id.toString(),
+        notificationStatus: "already_sent"
+      };
+    }
+
+    if (existingNotification?.status === "processing") {
+      console.log(
+        `Notification for order ${orderId} is already being processed. Skipping duplicate job.`
+      );
+
+      return {
+        orderId: order._id.toString(),
+        notificationStatus: "already_processing"
+      };
+    }
+
+    throw new Error(
+      `Could not claim notification for order ${orderId}`
+    );
   }
 
-  // Mark this attempt as processing.
-  notification.status = "processing";
-  notification.attempts += 1;
-  notification.lastError = null;
-  await notification.save();
-
+  // Step 4: Simulate sending the notification.
   try {
-    // Simulate sending the notification.
     console.log("Processing order notification:", {
       orderId: order._id.toString(),
       email: order.email,
@@ -156,6 +191,7 @@ const processNotificationJob = async (job) => {
     throw error;
   }
 };
+
 
 
 const startWorker = async () => {
