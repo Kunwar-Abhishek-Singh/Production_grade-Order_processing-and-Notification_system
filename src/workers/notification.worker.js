@@ -1,7 +1,7 @@
 
 const { Worker, UnrecoverableError } = require("bullmq"); const IORedis = require("ioredis");
 const mongoose = require("mongoose");
-
+const { randomUUID } = require("node:crypto");
 const { config } = require("../config/env");
 const connectDB = require("../config/database");
 const Order = require("../models/order.model");
@@ -26,53 +26,6 @@ connection.on("error", (error) => {
 
 let notificationWorker;
 let isShuttingDown = false;
-
-
-// const processNotificationJob = async (job) => {
-
-//    if (job.name === "test-retry-to-dlq") {
-//     console.log(
-//       `[Retry test] Attempt ${job.attemptsMade + 1} at ${new Date().toISOString()}`
-//     );
-
-//     throw new Error("Intentional recoverable failure for DLQ test");
-//   }
-
-//   if (job.name !== "order-created") {
-//     throw new UnrecoverableError(
-//       `Unsupported job type: ${job.name}`
-//     );
-//   }
-
-
-//   const { orderId } = job.data;
-//   const order = await Order.findById(orderId);
-
-//   if (!order) {
-//     throw new UnrecoverableError(
-//       `Order not found: ${orderId}`
-//     );
-//   }
-
-//   console.log("Processing order notification:", {
-//     orderId: order._id.toString(),
-//     email: order.email,
-//     productId: order.productId,
-//     quantity: order.quantity
-//   });
-
-//   console.log(
-//     `Simulated notification for order ${order._id} to ${order.email}`
-//   );
-
-//   return {
-//     orderId: order._id.toString(),
-//     notificationStatus: "simulated"
-//   };
-// };
-
-
-
 
 const processNotificationJob = async (job) => {
   if (job.name !== "order-created") {
@@ -106,11 +59,10 @@ const processNotificationJob = async (job) => {
     { upsert: true }
   );
 
-  // Step 2: Atomically claim the notification.
-  // Only a pending or failed notification can be claimed.
 
   // Step 2: Atomically claim a new, failed, or stale notification.
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
+  const claimToken = randomUUID();
 
   const notification = await Notification.findOneAndUpdate(
     {
@@ -136,6 +88,7 @@ const processNotificationJob = async (job) => {
       $set: {
         status: "processing",
         processingStartedAt: new Date(),
+        processingToken: claimToken,
         lastError: null
       },
       $inc: {
@@ -286,15 +239,6 @@ const startWorker = async () => {
   notificationWorker.on("completed", (job, result) => {
     console.log(`Job ${job.id} completed:`, result);
   });
-
-  // notificationWorker.on("failed", (job, error) => {
-  //   console.error(
-  //     `Job ${job?.id ?? "unknown"} failed:`,
-  //     error.message
-  //   );
-  // });
-
-
 
   notificationWorker.on("failed", (job, error) => {
     console.error(
