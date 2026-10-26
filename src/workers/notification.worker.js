@@ -108,15 +108,34 @@ const processNotificationJob = async (job) => {
 
   // Step 2: Atomically claim the notification.
   // Only a pending or failed notification can be claimed.
+  
+  // Step 2: Atomically claim a new, failed, or stale notification.
+  const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
+
   const notification = await Notification.findOneAndUpdate(
     {
       orderId: order._id,
       type: "order_confirmation",
-      status: { $in: ["pending", "failed"] }
+      $or: [
+        { status: { $in: ["pending", "failed"] } },
+        {
+          status: "processing",
+          processingStartedAt: { $lt: staleBefore }
+        },
+        {
+          status: "processing",
+          processingStartedAt: null
+        },
+        {
+          status: "processing",
+          processingStartedAt: { $exists: false }
+        }
+      ]
     },
     {
       $set: {
         status: "processing",
+        processingStartedAt: new Date(),
         lastError: null
       },
       $inc: {
@@ -127,6 +146,7 @@ const processNotificationJob = async (job) => {
       returnDocument: "after"
     }
   );
+
 
   // Step 3: If we couldn't claim it, check why.
   if (!notification) {
