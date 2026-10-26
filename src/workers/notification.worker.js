@@ -1,15 +1,16 @@
 
 const { Worker, UnrecoverableError } = require("bullmq"); const IORedis = require("ioredis");
 const mongoose = require("mongoose");
-const { randomUUID } = require("node:crypto");
 const { config } = require("../config/env");
 const connectDB = require("../config/database");
-const Order = require("../models/order.model");
-const Notification = require("../models/notification.model");
 const {
   notificationDLQ,
   closeNotificationDLQ
 } = require("../queues/notification-dlq.queue");
+const {
+  processNotificationJob
+} = require("../services/notification.service");
+
 const QUEUE_NAME = "order-notifications";
 
 if (!config.redis.redisUrl) {
@@ -27,145 +28,7 @@ connection.on("error", (error) => {
 let notificationWorker;
 let isShuttingDown = false;
 
-const processNotificationJob = async (job) => {
-  if (job.name !== "order-created") {
-    throw new UnrecoverableError(
-      `Unsupported job type: ${job.name}`
-    );
-  }
 
-  const { orderId } = job.data;
-
-  const order = await Order.findById(orderId);
-
-  if (!order) {
-    throw new UnrecoverableError(
-      `Order not found: ${orderId}`
-    );
-  }
-
-  // Step 1: Ensure one notification record exists for this order.
-  await Notification.updateOne(
-    {
-      orderId: order._id,
-      type: "order_confirmation"
-    },
-    {
-      $setOnInsert: {
-        status: "pending",
-        attempts: 0
-      }
-    },
-    { upsert: true }
-  );
-
-
-  // Step 2: Atomically claim a new, failed, or stale notification.
-  const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
-  const claimToken = randomUUID();
-
-  const notification = await Notification.findOneAndUpdate(
-    {
-      orderId: order._id,
-      type: "order_confirmation",
-      $or: [
-        { status: { $in: ["pending", "failed"] } },
-        {
-          status: "processing",
-          processingStartedAt: { $lt: staleBefore }
-        },
-        {
-          status: "processing",
-          processingStartedAt: null
-        },
-        {
-          status: "processing",
-          processingStartedAt: { $exists: false }
-        }
-      ]
-    },
-    {
-      $set: {
-        status: "processing",
-        processingStartedAt: new Date(),
-        processingToken: claimToken,
-        lastError: null
-      },
-      $inc: {
-        attempts: 1
-      }
-    },
-    {
-      returnDocument: "after"
-    }
-  );
-
-
-  // Step 3: If we couldn't claim it, check why.
-  if (!notification) {
-    const existingNotification = await Notification.findOne({
-      orderId: order._id,
-      type: "order_confirmation"
-    });
-
-    if (existingNotification?.status === "sent") {
-      console.log(
-        `Notification already sent for order ${orderId}. Skipping.`
-      );
-
-      return {
-        orderId: order._id.toString(),
-        notificationStatus: "already_sent"
-      };
-    }
-
-    if (existingNotification?.status === "processing") {
-      console.log(
-        `Notification for order ${orderId} is already being processed. Skipping duplicate job.`
-      );
-
-      return {
-        orderId: order._id.toString(),
-        notificationStatus: "already_processing"
-      };
-    }
-
-    throw new Error(
-      `Could not claim notification for order ${orderId}`
-    );
-  }
-
-  // Step 4: Simulate sending the notification.
-  try {
-    console.log("Processing order notification:", {
-      orderId: order._id.toString(),
-      email: order.email,
-      productId: order.productId,
-      quantity: order.quantity
-    });
-
-    console.log(
-      `Simulated notification for order ${order._id} to ${order.email}`
-    );
-
-    notification.status = "sent";
-    notification.sentAt = new Date();
-    notification.processingStartedAt = null;
-    await notification.save();
-
-    return {
-      orderId: order._id.toString(),
-      notificationStatus: "simulated"
-    };
-  } catch (error) {
-    notification.status = "failed";
-    notification.lastError = error.message;
-    notification.processingStartedAt = null;
-    await notification.save();
-
-    throw error;
-  }
-};
 
 
 
