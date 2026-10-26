@@ -108,7 +108,7 @@ const processNotificationJob = async (job) => {
 
   // Step 2: Atomically claim the notification.
   // Only a pending or failed notification can be claimed.
-  
+
   // Step 2: Atomically claim a new, failed, or stale notification.
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
 
@@ -197,6 +197,7 @@ const processNotificationJob = async (job) => {
 
     notification.status = "sent";
     notification.sentAt = new Date();
+    notification.processingStartedAt = null;
     await notification.save();
 
     return {
@@ -206,6 +207,7 @@ const processNotificationJob = async (job) => {
   } catch (error) {
     notification.status = "failed";
     notification.lastError = error.message;
+    notification.processingStartedAt = null;
     await notification.save();
 
     throw error;
