@@ -38,6 +38,11 @@ const notificationSchema = new mongoose.Schema(
             default: null
         },
 
+        processingToken: {
+            type: String,
+            default: null
+        },
+
         lastError: {
             type: String,
             default: null
