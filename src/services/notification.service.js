@@ -5,7 +5,29 @@ const { UnrecoverableError } = require("bullmq");
 const Order = require("../models/order.model");
 const Notification = require("../models/notification.model");
 
-const processNotificationJob = async (job) => {
+const IORedis = require("ioredis");
+const { config } = require("../config/env");
+const {
+  acquireNotificationLock
+} = require("../utils/notification-lock");
+
+if (!config.redis.redisUrl) {
+  throw new Error("REDIS_URL is not configured");
+}
+
+const lockConnection = new IORedis(config.redis.redisUrl, {
+  maxRetriesPerRequest: null,
+  lazyConnect: true
+});
+
+lockConnection.on("error", (error) => {
+  console.error(
+    "Notification lock Redis error:",
+    error.message
+  );
+});
+
+const processNotificationJobWithLock = async (job) => {
   if (job.name !== "order-created") {
     throw new UnrecoverableError(
       `Unsupported job type: ${job.name}`
@@ -186,5 +208,58 @@ const processNotificationJob = async (job) => {
     throw error;
   }
 };
+
+
+const processNotificationJob = async (job) => {
+  if (job.name !== "order-created") {
+    throw new UnrecoverableError(
+      `Unsupported job type: ${job.name}`
+    );
+  }
+
+  const { orderId } = job.data;
+
+  if (!orderId) {
+    throw new UnrecoverableError("Missing orderId in job data");
+  }
+
+  const lockKey = `notification-lock:${orderId}:order_confirmation`;
+
+  const lock = await acquireNotificationLock(
+    lockConnection,
+    lockKey
+  );
+
+//   if (!lock) {
+//     console.log(
+//       `Notification lock already held for order ${orderId}. Skipping duplicate job.`
+//     );
+
+//     return {
+//       orderId,
+//       notificationStatus: "already_processing"
+//     };
+//   }
+
+  if (!lock) {
+  throw new Error(
+    `Notification lock is held by another worker for order ${orderId}`
+  );
+}
+
+  try {
+    return await processNotificationJobWithLock(job, lock);
+  } finally {
+    try {
+      await lock.release();
+    } catch (error) {
+      console.error(
+        `Failed to release notification lock for order ${orderId}:`,
+        error.message
+      );
+    }
+  }
+};
+
 
 module.exports = { processNotificationJob };

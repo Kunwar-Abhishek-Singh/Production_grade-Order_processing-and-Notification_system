@@ -119,3 +119,27 @@ const acquireNotificationLock = async (
 };
 
 module.exports = { acquireNotificationLock };
+
+
+
+
+/*
+Atomic acquisition: Redis grants the lock only if the key doesn't already exist.
+
+
+
+Unique ownership: Each lock receives a random token.
+
+
+
+Automatic renewal: The 30-second lease is renewed every 10 seconds while ownership is maintained.
+
+
+
+Safe release: A worker can delete the lock only if its token still matches.
+
+
+
+Conservative failure handling: If renewal fails, the lock is considered lost.
+
+*/
