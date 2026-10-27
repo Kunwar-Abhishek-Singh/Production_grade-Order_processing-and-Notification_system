@@ -27,7 +27,7 @@ lockConnection.on("error", (error) => {
     );
 });
 
-const processNotificationJobWithLock = async (job) => {
+const processNotificationJobWithLock = async (job, lock) => {
     if (job.name !== "order-created") {
         throw new UnrecoverableError(
             `Unsupported job type: ${job.name}`
