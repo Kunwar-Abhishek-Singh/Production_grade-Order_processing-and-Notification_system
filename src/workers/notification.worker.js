@@ -8,7 +8,8 @@ const {
   closeNotificationDLQ
 } = require("../queues/notification-dlq.queue");
 const {
-  processNotificationJob
+  processNotificationJob,
+  closeNotificationLockConnection
 } = require("../services/notification.service");
 
 const QUEUE_NAME = "order-notifications";
@@ -129,7 +130,7 @@ const shutdown = async (signal) => {
     if (notificationWorker) {
       await notificationWorker.close();
     }
-
+    await closeNotificationLockConnection();
     if (connection.status !== "end") {
       await connection.quit();
     }
@@ -156,6 +157,7 @@ startWorker().catch(async (error) => {
     if (connection.status !== "end") {
       await connection.quit();
     }
+    await closeNotificationLockConnection();
     await closeNotificationDLQ();
     await mongoose.disconnect();
   } catch (shutdownError) {

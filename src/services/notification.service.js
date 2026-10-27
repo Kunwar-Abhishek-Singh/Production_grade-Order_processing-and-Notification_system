@@ -266,4 +266,20 @@ const processNotificationJob = async (job) => {
 };
 
 
-module.exports = { processNotificationJob };
+const closeNotificationLockConnection = async () => {
+  if (lockConnection.status === "end") {
+    return;
+  }
+
+  if (lockConnection.status === "wait") {
+    lockConnection.disconnect();
+    return;
+  }
+
+  await lockConnection.quit();
+};
+
+module.exports = {
+  processNotificationJob,
+  closeNotificationLockConnection
+};
