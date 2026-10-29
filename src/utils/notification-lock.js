@@ -79,6 +79,7 @@ const acquireNotificationLock = async (
 
   renewalTimer.unref();
 
+ 
   return {
     key,
     token,
@@ -87,8 +88,29 @@ const acquireNotificationLock = async (
       return lost;
     },
 
-    assertOwned() {
+    async assertOwned() {
       if (released || lost) {
+        throw new Error(
+          `Notification lock ownership lost: ${key}`
+        );
+      }
+
+      let currentToken;
+
+      try {
+        currentToken = await redis.get(key);
+      } catch (error) {
+        lost = true;
+
+        throw new Error(
+          `Could not verify notification lock ownership: ${key}`,
+          { cause: error }
+        );
+      }
+
+      if (currentToken !== token) {
+        lost = true;
+
         throw new Error(
           `Notification lock ownership lost: ${key}`
         );
@@ -103,7 +125,6 @@ const acquireNotificationLock = async (
       released = true;
       clearInterval(renewalTimer);
 
-      // Delete only if this process still owns the lock.
       const result = await redis.eval(
         RELEASE_SCRIPT,
         1,
@@ -116,6 +137,7 @@ const acquireNotificationLock = async (
       }
     }
   };
+
 };
 
 module.exports = { acquireNotificationLock };
