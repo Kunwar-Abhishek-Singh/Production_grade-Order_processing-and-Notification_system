@@ -143,6 +143,8 @@ const processNotificationJobWithLock = async (job, lock) => {
             quantity: order.quantity
         });
 
+        await lock.assertOwned();
+
         console.log(
             `Simulated notification for order ${order._id} to ${order.email}`
         );
