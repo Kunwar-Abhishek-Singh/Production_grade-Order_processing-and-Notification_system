@@ -148,7 +148,7 @@ const processNotificationJobWithLock = async (job, lock) => {
         );
 
         // Confirm Redis lock ownership before updating MongoDB.
-        lock.assertOwned();
+        await lock.assertOwned();
 
         // Update only if this attempt still owns the notification.
         const updateResult = await Notification.updateOne(
@@ -186,7 +186,7 @@ const processNotificationJobWithLock = async (job, lock) => {
     } catch (error) {
         // Never let an old attempt overwrite a newer owner's state.
         try {
-            lock.assertOwned();
+            await lock.assertOwned();
             await Notification.updateOne(
                 {
                     _id: notification._id,
